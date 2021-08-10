@@ -60,7 +60,6 @@ class Users(Resource):
 
             # select our user
             user_data = data[data['userId'] == args['userId']]
-
             # update user's location
             user_data['locations'] = user_data['locations'].values[0].append(args['location'])
 
@@ -94,9 +93,73 @@ class Users(Resource):
 class Locations(Resource):
     def get(self):
         data = pd.read_csv('locations.csv') # read CSV
-        data = data.to_dict() # convert dataframe to dictionary
-        return{'data': data}, 200 # return data and 200 OK code
-    pass
+        return{'data': data.to_dict()}, 200 # return data and 200 OK code
+    
+    def post(self):
+        parser = reqparse.RequestParser()
+        parser.add_argument('locationId', required = True, type = int)
+        parser.add_argument('name', required = True)
+        parser.add_argument('rating', required = True)
+        args = parser.parse_args()
+
+        data = pd.read_csv('loactions.csv')
+        if args['locationId'] in list(data['locationId']):
+            return{
+                'message':f"'{args['locationId']}' already exists."
+            }, 401
+        else:
+            new_data = pd.DataFrame({
+                'locaitonId':args['locationId'],
+                'name': args['name'],
+                'rating': args['rating']
+            })
+
+            data = data.append(new_data, ignore_index=True)
+            data.to_csv('locaitons.csv', index=False)
+            return{'data':data.to_dict()}, 200
+
+    def patch(self):
+        parser = reqparse.RequestParser()
+        parser.add_argument('locationId', required = True, type = int)
+        parser.add_argument('name', required = True)
+        parser.add_argument('rating', required = True)
+        args = parser.parse_args()
+
+        data = pd.read_csv('locations.csv')
+
+        if args['locationId'] in list(data['locationId']):
+            user_data = data[data['locationId']== args['locationId']]
+
+            if 'name' in args:
+                user_data['name'] = args['name']
+            
+            if 'rating' in args:
+                user_data['rating'] = args['rating']
+
+            data[data['locationId']== args['locationId']] = user_data
+
+            data.to_csv('locations.csv', index=False)
+            return {'data':data.to_dict()}, 200
+        else:
+            return{
+                'message':f"'{args['locationId']}' location does not exist."
+            }, 404
+
+    def delete(self):
+        parser = reqparse.RequestParser()
+        parser.add_argument('locationId', required =True, type = int)
+        args = parser.parse_args()
+
+        data = pd.read_csv('locations.csv')
+
+        if args['locationId'] in list(data['locationsId']):
+            data = data[data['locationId'] != args['locationId']]
+            data.to_csv('locations.csv', index=False)
+            return{'data':data.to_dict()}, 200
+        else:
+            return{
+                'message':f"'{args['locationId']}' locaiton does not exist."
+            }
 
 api.add_resource(Users, '/users') # '/users' is entry point
 api.add_resource(Locations, '/locations') # '/users' is entry point
